@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -8,6 +9,7 @@ using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Fitbit.Api.Portable.Models;
 using Fitbit.Api.Portable.OAuth2;
+using Fitbit.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
@@ -19,6 +21,7 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
         private readonly ILogger<Worker> _logger;
         private readonly IConfiguration _configuration;
         private readonly FitbitDbContext _db;
+        private readonly HashSet<int> _activityTypes = new ();
 
         public Worker(ILogger<Worker> logger, IConfiguration configuration,
             FitbitDbContext db)
@@ -28,7 +31,7 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
             _db = db;
         }
 
-        private bool _hasActivityTypes = false;
+        private DateTime _lastActivityTypeSync = DateTime.Now;
         
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
@@ -73,24 +76,64 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                     TokenType = user.TokenType,
                     UserId = user.UserId
                 });
-                DateTime? after = user.LatestSyncedStamp ?? (new DateTime(1970, 1, 1)).ToUniversalTime();
 
                 // get activity types if needed.
-                if (!_hasActivityTypes)
+                // make sure to refresh once in a while.
+                if ((DateTime.Now - _lastActivityTypeSync).TotalHours > 2)
+                {
+                    _activityTypes.Clear();
+                }
+                if (_activityTypes.Count == 0)
                 {
                     // get activity types.
-                    var types = fitbitClient.GetActivityTypeListAsync();
+                    var types = await fitbitClient.GetActivityCategoryListAsync();
                     
-                }
+                    // the activity id with name 'Bicycling'.
+                    foreach (var category in types.Categories)
+                    {
+                        if (category.Name == "Bicycling")
+                        {
+                            foreach (var activity in category.Activities)
+                            {
+                                _activityTypes.Add(activity.Id);
+                            }
+                        }
 
-                // var activities = await fitbitClient.GetActivityLogsListAsync(null, after);
-                // foreach (var activity in activities.Activities)
-                // {
-                //     ActivityLevel
-                //     activity.ActivityTypeId
-                // }
-                //
-                // activities.Activities
+                        if (category.SubCategories == null) continue;
+                        
+                        foreach (var subCategory in category.SubCategories)
+                        {
+                            if (subCategory.Name == "Bicycling")
+                            {
+                                foreach (var activity in subCategory.Activities)
+                                {
+                                    _activityTypes.Add(activity.Id);
+                                }
+                            }
+                        }
+                    }
+
+                    if (_activityTypes.Count == 0)
+                    {
+                        _logger.LogCritical("Bicycling activity types not found, cannot synchronize activities without them.");
+                    }
+                    
+                    _lastActivityTypeSync = DateTime.Now;
+                }
+                
+                // get cycling activities.
+                var after = user.LatestSyncedStamp ?? (new DateTime(1970, 1, 1)).ToUniversalTime();
+                var activities = await fitbitClient.GetActivityLogsListAsync(null, after);
+                if (activities?.Activities == null) return;
+                foreach (var activity in activities.Activities)
+                {
+                    // if not a cycling activity, ignore.
+                    if (!_activityTypes.Contains(activity.ActivityTypeId)) continue;
+                    
+                    // get tcx.
+                    var tcx = await fitbitClient.GetApiFreeResponseAsync(activity.TcxLink);
+                    Console.WriteLine($"Bicycle: {activity.ActivityName}");
+                }
             }
             catch (Exception e)
             {

@@ -228,7 +228,7 @@ namespace Fitbit.Api.Portable
             return AccessToken;
         }
 
-        public async Task<ActivityTypeList> GetActivityTypeListAsync()
+        public async Task<ActivityCategoryList> GetActivityCategoryListAsync()
         {
             var apiCall = FitbitClientHelperExtensions.ToFullUrl("/1/activities.json");
             using (HttpRequestMessage request = GetRequest(HttpMethod.Get, apiCall))
@@ -238,7 +238,7 @@ namespace Fitbit.Api.Portable
                     await HandleResponse(response);
                     string responseBody = await response.Content.ReadAsStringAsync();
                     var serializer = new JsonDotNetSerializer();
-                    return serializer.Deserialize<ActivityTypeList>(responseBody);
+                    return serializer.Deserialize<ActivityCategoryList>(responseBody);
                 }
             }
         }

@@ -11,5 +11,10 @@ namespace Fitbit.Models
         public int Id { get; set; }
         
         public string Name { get; set; }
+
+        public override string ToString()
+        {
+            return $"ActivityType: {this.Id} {this.Name}";
+        }
     }
 }
