@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Fitbit.Api.Portable;
 using Fitbit.Api.Portable.OAuth2;
 using Fitbit.Models;
@@ -38,9 +39,15 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
 
 	    [HttpGet]
 	    [Route("register")]
-        public IActionResult Register(string code)
+        public async Task<IActionResult> Register(string code)
         {
 	        _logger.LogInformation($"Request to register: {code}");
+
+	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register/";
+	        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
+
+	        var accessToken = await authenticator.ExchangeAuthCodeForAccessTokenAsync(code);
+	        
 	        // var client = new FitbitClient()
 	        return new NotFoundResult();
         }

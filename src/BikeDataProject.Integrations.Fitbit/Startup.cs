@@ -47,6 +47,9 @@ namespace BikeDataProject.Integrations.Fitbit
                 ClientSecret = File.ReadAllText(_configuration["FITBIT_CLIENT_SECRET"])
             };
             var subVerCode = File.ReadAllText(_configuration["FITBIT_SUB_VER_CODE"]);
+            
+            Log.Information($"ClientId: {fitbitCredentials.ClientId}");
+            
             services.AddSingleton(new WebHookControllerSettings()
             {
                 FitbitAppCredentials = fitbitCredentials,
