@@ -19,4 +19,4 @@ COPY ./bin/release/net5.0/publish /var/app
 
 # Set the default command to execute when creating a new container
 WORKDIR /var/app/
-ENTRYPOINT dotnet BikeDataProject.Integrations.Fitbit.dll
+ENTRYPOINT dotnet BikeDataProject.Integrations.Fitbit.API.dll

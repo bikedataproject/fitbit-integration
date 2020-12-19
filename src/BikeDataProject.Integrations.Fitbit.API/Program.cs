@@ -13,7 +13,7 @@ using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Formatting.Json;
 
-namespace BikeDataProject.Integrations.Fitbit
+namespace BikeDataProject.Integrations.Fitbit.API
 {
     public class Program
     {

@@ -4,19 +4,21 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
-using BikeDataProject.Integrations.Fitbit.Controllers;
+using BikeDataProject.Integrations.Fitbit.API.Controllers;
+using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
 
-namespace BikeDataProject.Integrations.Fitbit
+namespace BikeDataProject.Integrations.Fitbit.API
 {
     public class Startup
     {
@@ -34,10 +36,6 @@ namespace BikeDataProject.Integrations.Fitbit
             Log.Logger = new LoggerConfiguration()
                 .ReadFrom.Configuration(_configuration)
                 .CreateLogger();
-            
-            Log.Information($"URLS: {_configuration["URLS"]}");
-            
-            // add logging.
             services.AddLogging(b => { b.AddSerilog(); });
             
             // read/parse fitbit configurations.
@@ -47,14 +45,15 @@ namespace BikeDataProject.Integrations.Fitbit
                 ClientSecret = File.ReadAllText(_configuration["FITBIT_CLIENT_SECRET"])
             };
             var subVerCode = File.ReadAllText(_configuration["FITBIT_SUB_VER_CODE"]);
-            
-            Log.Information($"ClientId: {fitbitCredentials.ClientId}");
-            
-            services.AddSingleton(new WebHookControllerSettings()
+            services.AddSingleton(new WebhookControllerSettings()
             {
                 FitbitAppCredentials = fitbitCredentials,
                 SubscriptionVerificationCode = subVerCode
             });
+            
+            // configure fitbit db access.
+            services.AddDbContext<FitbitDbContext>(options => options.UseNpgsql(
+                File.ReadAllText("FITBIT_DB")));
             
             // add controllers.
             services.AddControllers();

@@ -3,25 +3,30 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Fitbit.Api.Portable.OAuth2;
 using Fitbit.Models;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Logging;
 
-namespace BikeDataProject.Integrations.Fitbit.Controllers
+namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 {
     [ApiController]
     public class WebhookController : ControllerBase
     {
         private readonly ILogger<WebhookController> _logger;
-        private readonly WebHookControllerSettings _configuration;
+        private readonly WebhookControllerSettings _configuration;
+        private readonly FitbitDbContext _db;
 
         public WebhookController(ILogger<WebhookController> logger, 
-	        WebHookControllerSettings configuration)
+	        WebhookControllerSettings configuration,
+	        FitbitDbContext db)
         {
             _logger = logger;
             _configuration = configuration;
+            _db = db;
         }
 
         [HttpGet]
@@ -31,7 +36,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
 	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register";
 	        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
 
-	        var scopes = new[] {"activity"};
+	        var scopes = new[] {"activity","profile","location"};
 	        string authUrl = authenticator.GenerateAuthUrl(scopes, null);
 
 	        return Redirect(authUrl);
@@ -46,10 +51,44 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
 	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register";
 	        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
 
-	        var accessToken = await authenticator.ExchangeAuthCodeForAccessTokenAsync(code);
+	        var newToken = await authenticator.ExchangeAuthCodeForAccessTokenAsync(code);
+	        if (newToken == null)
+	        {
+		        _logger.LogError("Getting access token failed!");
+		        return new NotFoundResult();
+	        }
+
+	        var exitingToken = (from accessTokens in _db.AccessTokens
+		        where accessTokens.UserId == newToken.UserId
+		        select accessTokens).FirstOrDefault();
+	        if (exitingToken != null)
+	        {
+		        exitingToken.Scope = newToken.Scope;
+		        exitingToken.Token = newToken.Token;
+		        exitingToken.ExpiresIn = newToken.ExpiresIn;
+		        exitingToken.RefreshToken = newToken.RefreshToken;
+		        exitingToken.TokenType = newToken.TokenType;
+
+		        _db.AccessTokens.Update(exitingToken);
+	        }
+	        else
+	        {
+		        exitingToken = new AccessToken
+		        {
+			        UserId = newToken.UserId,
+			        Scope = newToken.Scope,
+			        Token = newToken.Token,
+			        ExpiresIn = newToken.ExpiresIn,
+			        RefreshToken = newToken.RefreshToken,
+			        TokenType = newToken.TokenType
+		        };
+
+		        await _db.AccessTokens.AddAsync(exitingToken);
+	        }
+
+	        await _db.SaveChangesAsync();
 	        
-	        // var client = new FitbitClient()
-	        return new NotFoundResult();
+	        return new OkResult();
         }
 
         [HttpGet]

@@ -1,8 +1,8 @@
 using Fitbit.Api.Portable;
 
-namespace BikeDataProject.Integrations.Fitbit.Controllers
+namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 {
-    public class WebHookControllerSettings
+    public class WebhookControllerSettings
     {
         public FitbitAppCredentials FitbitAppCredentials { get; set; }
         

@@ -1,6 +1,6 @@
 using Microsoft.Extensions.Configuration;
 
-namespace BikeDataProject.Integrations.Fitbit
+namespace BikeDataProject.Integrations.Fitbit.API
 {
     internal static class ConfigurationExtensions
     {
