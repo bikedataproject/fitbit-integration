@@ -53,7 +53,7 @@ namespace BikeDataProject.Integrations.Fitbit.API
             
             // configure fitbit db access.
             services.AddDbContext<FitbitDbContext>(options => options.UseNpgsql(
-                File.ReadAllText("FITBIT_DB")));
+                File.ReadAllText(_configuration["FITBIT_DB"])));
             
             // add controllers.
             services.AddControllers();
