@@ -35,6 +35,8 @@ namespace BikeDataProject.Integrations.Fitbit
                 .ReadFrom.Configuration(_configuration)
                 .CreateLogger();
             
+            Log.Information($"URLS: {_configuration["URLS"]}");
+            
             // add logging.
             services.AddLogging(b => { b.AddSerilog(); });
             

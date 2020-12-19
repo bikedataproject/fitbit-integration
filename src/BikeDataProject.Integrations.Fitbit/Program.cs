@@ -40,6 +40,8 @@ namespace BikeDataProject.Integrations.Fitbit
                     var host = WebHost.CreateDefaultBuilder(args)
                         .ConfigureAppConfiguration((hostingContext, config) =>
                         {
+                            Log.Information($"Env: {hostingContext.HostingEnvironment.EnvironmentName}");
+                            
                             config.AddJsonFile(deployTimeSettings, true, true);
                             config.AddEnvironmentVariables((c) => { c.Prefix = envVarPrefix; });
                         }).UseStartup<Startup>().Build();
