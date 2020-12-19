@@ -23,12 +23,12 @@ jobs:
       run: dotnet test --no-build --verbosity normal
     - name: Publish project
       run: dotnet publish -c release
-      working-directory: ./src/BikeDataProject.Integrations.Fitbit/
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
     - name: Build the Docker image
       run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-api:staging
-      working-directory: ./src/BikeDataProject.Integrations.Fitbit/
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
     - name: Login to Dock Hub
       run: echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u xivk --password-stdin
     - name: Publish the image to GitHub packages.
       run: docker push bikedataproject/fitbit-integration-api:staging
-      working-directory: ./src/BikeDataProject.Integrations.Fitbit/
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
