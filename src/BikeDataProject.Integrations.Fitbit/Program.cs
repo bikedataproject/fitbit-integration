@@ -32,48 +32,16 @@ namespace BikeDataProject.Integrations.Fitbit
                 var configurationBuilder = new ConfigurationBuilder()
                     .AddJsonFile("appsettings.json", true, true);
 
-                // get deploy time settings if present.
-                var configuration = configurationBuilder.Build();
-                var deployTimeSettings = configuration["deploy-time-settings"] ?? "/var/app/config/appsettings.json";
-                configurationBuilder = configurationBuilder
-                    .AddJsonFile(deployTimeSettings, true, true);
-
-                // get environment variable prefix.
-                configuration = configurationBuilder.Build();
-                var envVarPrefix = configuration["env-var-prefix"] ?? "BIKEDATA_";
-                configurationBuilder = configurationBuilder
-                    .AddEnvironmentVariables((c) => { c.Prefix = envVarPrefix; });
-
-                // build configuration.
-                configuration = configurationBuilder.Build();
-
-                // read/parse configurations.
-                var fitbitCredentials = new FitbitAppCredentials()
-                {
-                    ClientId = configuration["FITBIT_CLIENT_ID"],
-                    ClientSecret = await File.ReadAllTextAsync(configuration["FITBIT_CLIENT_SECRET"])
-                };
-                var subVerCode = await File.ReadAllTextAsync(configuration["FITBIT_SUB_VER_CODE"]);
-
-                // setup logging.
-                Log.Logger = new LoggerConfiguration()
-                    .ReadFrom.Configuration(configuration)
-                    .CreateLogger();
+                // get deploy time setting.
+                var (deployTimeSettings, envVarPrefix) = configurationBuilder.GetDeployTimeSettings();
 
                 try
                 {
                     var host = WebHost.CreateDefaultBuilder(args)
-                        .ConfigureServices((_, services) =>
+                        .ConfigureAppConfiguration((hostingContext, config) =>
                         {
-                            // add logging.
-                            services.AddLogging(b => { b.AddSerilog(); });
-
-                            // add configuration.
-                            services.AddSingleton(new StartupConfiguration()
-                            {
-                                FitbitAppCredentials = fitbitCredentials,
-                                SubscriptionVerificationCode = subVerCode
-                            });
+                            config.AddJsonFile(deployTimeSettings, true, true);
+                            config.AddEnvironmentVariables((c) => { c.Prefix = envVarPrefix; });
                         }).UseStartup<Startup>().Build();
 
                     // run!

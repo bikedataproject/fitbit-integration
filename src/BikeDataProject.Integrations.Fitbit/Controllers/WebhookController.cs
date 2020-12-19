@@ -13,10 +13,10 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
     public class WebhookController : ControllerBase
     {
         private readonly ILogger<WebhookController> _logger;
-        private readonly StartupConfiguration _configuration;
+        private readonly WebHookControllerSettings _configuration;
 
         public WebhookController(ILogger<WebhookController> logger, 
-	        StartupConfiguration configuration)
+	        WebHookControllerSettings configuration)
         {
             _logger = logger;
             _configuration = configuration;
@@ -26,6 +26,8 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
         [Route("/")]
         public IActionResult Verify([FromQuery] string? verify)
         {
+	        _logger.LogInformation($"Request to verify: {verify}");
+	        
 	        // implements verification mechanism as described:
 	        // https://dev.fitbit.com/build/reference/web-api/subscriptions/#verify-a-subscriber
 	        if (string.IsNullOrWhiteSpace(verify)) return new NotFoundResult();
