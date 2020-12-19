@@ -28,7 +28,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
         [Route("authorize")]
         public IActionResult Authorize()
         {
-	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register/";
+	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register";
 	        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
 
 	        var scopes = new[] {"activity"};
@@ -43,7 +43,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
         {
 	        _logger.LogInformation($"Request to register: {code}");
 
-	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register/";
+	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register";
 	        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
 
 	        var accessToken = await authenticator.ExchangeAuthCodeForAccessTokenAsync(code);
