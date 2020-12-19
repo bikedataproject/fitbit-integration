@@ -23,7 +23,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
         }
 
         [HttpGet]
-        [Route("webhook")]
+        [Route("/")]
         public IActionResult Verify([FromQuery] string? verify)
         {
 	        // implements verification mechanism as described:
@@ -39,7 +39,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
         }
 
         [HttpPost]
-        [Route("webhook")]
+        [Route("/")]
         public IActionResult SubscriptionData( string? verify)
         {
 	        var subscriptionManager = new SubscriptionManager();
