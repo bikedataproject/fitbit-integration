@@ -9,6 +9,12 @@ VOLUME ["/var/app/config"]
 VOLUME ["/var/app/data"]
 VOLUME ["/var/app/logs"]
 
+# SET base url
+ENV ASPNETCORE_URLS http://+:5000
+
+# Expose ports
+EXPOSE 5000
+
 COPY ./bin/release/net5.0/publish /var/app
 
 # Set the default command to execute when creating a new container
