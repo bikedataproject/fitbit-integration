@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Fitbit.Api.Portable;
+using Fitbit.Api.Portable.OAuth2;
 using Fitbit.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
@@ -20,6 +21,27 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
         {
             _logger = logger;
             _configuration = configuration;
+        }
+
+        [HttpGet]
+        [Route("authorize")]
+        public IActionResult Authorize()
+        {
+	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register/";
+	        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
+
+	        var scopes = new[] {"activity"};
+	        string authUrl = authenticator.GenerateAuthUrl(scopes, null);
+
+	        return Redirect(authUrl);
+        }
+
+	    [HttpGet]
+	    [Route("register")]
+        public IActionResult Register(string code)
+        {
+	        // var client = new FitbitClient()
+	        return new NotFoundResult();
         }
 
         [HttpGet]
@@ -42,7 +64,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
 
         [HttpPost]
         [Route("/")]
-        public IActionResult SubscriptionData( string? verify)
+        public IActionResult SubscriptionData()
         {
 	        var subscriptionManager = new SubscriptionManager();
 	        List<UpdatedResource> updatedResources; //all the updated users and which resources
@@ -58,6 +80,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
 
 	        foreach (var updatedResource in updatedResources)
 	        {
+		        _logger.LogInformation($"Received: {updatedResource.CollectionType}");
 		        //do something here with the updated resources fitbit is reporting
 
 		        //likely, you'll grab stored AuthToken/AuthSecret 
