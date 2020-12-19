@@ -40,6 +40,7 @@ namespace BikeDataProject.Integrations.Fitbit.Controllers
 	    [Route("register")]
         public IActionResult Register(string code)
         {
+	        _logger.LogInformation($"Request to register: {code}");
 	        // var client = new FitbitClient()
 	        return new NotFoundResult();
         }
