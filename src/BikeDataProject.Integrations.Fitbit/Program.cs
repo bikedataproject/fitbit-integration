@@ -11,13 +11,22 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Serilog;
+using Serilog.Formatting.Json;
 
 namespace BikeDataProject.Integrations.Fitbit
 {
     public class Program
     {
         public static async Task Main(string[] args)
-        {
+        {           
+            // hardcode configuration before the configured logging can be bootstrapped.
+            var logFile = Path.Combine("logs", "boot-log-.txt");
+            Log.Logger = new LoggerConfiguration()
+                .MinimumLevel.Verbose()
+                .WriteTo.File(new JsonFormatter(), logFile, rollingInterval: RollingInterval.Day)
+                .WriteTo.Console()
+                .CreateLogger();
+            
             try
             {
                 var configurationBuilder = new ConfigurationBuilder()
@@ -77,7 +86,7 @@ namespace BikeDataProject.Integrations.Fitbit
             }
             catch (Exception e)
             {
-                Console.WriteLine(e);
+                Log.Logger.Fatal(e, "Unhandled exception.");
                 throw;
             }
         }
