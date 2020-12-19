@@ -6,9 +6,9 @@ MinimumVisualStudioVersion = 15.0.26124.0
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "src", "src", "{D6401088-8C8A-493A-A941-AC9F2E49ABC6}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "root", "root", "{80B0D364-C8E4-48D8-AB6F-95C2FF352B46}"
-ProjectSection(SolutionItems) = preProject
-	README.md = README.md
-EndProjectSection
+	ProjectSection(SolutionItems) = preProject
+		README.md = README.md
+	EndProjectSection
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "BikeDataProject.Integrations.Fitbit.Db", "src\BikeDataProject.Integrations.Fitbit.Db\BikeDataProject.Integrations.Fitbit.Db.csproj", "{74535DC3-8E4D-4873-82A1-CFA6C6A9A21B}"
 EndProject

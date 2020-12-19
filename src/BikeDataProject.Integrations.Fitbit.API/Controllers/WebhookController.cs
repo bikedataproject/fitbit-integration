@@ -46,49 +46,64 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 	    [Route("register")]
         public async Task<IActionResult> Register(string code)
         {
-	        _logger.LogInformation($"Request to register: {code}");
-
-	        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register";
-	        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
-
-	        var newToken = await authenticator.ExchangeAuthCodeForAccessTokenAsync(code);
-	        if (newToken == null)
+	        try
 	        {
-		        _logger.LogError("Getting access token failed!");
-		        return new NotFoundResult();
-	        }
+		        _logger.LogInformation($"Request to register: {code}");
 
-	        var exitingToken = (from accessTokens in _db.AccessTokens
-		        where accessTokens.UserId == newToken.UserId
-		        select accessTokens).FirstOrDefault();
-	        if (exitingToken != null)
-	        {
-		        exitingToken.Scope = newToken.Scope;
-		        exitingToken.Token = newToken.Token;
-		        exitingToken.ExpiresIn = newToken.ExpiresIn;
-		        exitingToken.RefreshToken = newToken.RefreshToken;
-		        exitingToken.TokenType = newToken.TokenType;
-
-		        _db.AccessTokens.Update(exitingToken);
-	        }
-	        else
-	        {
-		        exitingToken = new AccessToken
-		        {
-			        UserId = newToken.UserId,
-			        Scope = newToken.Scope,
-			        Token = newToken.Token,
-			        ExpiresIn = newToken.ExpiresIn,
-			        RefreshToken = newToken.RefreshToken,
-			        TokenType = newToken.TokenType
-		        };
-
-		        await _db.AccessTokens.AddAsync(exitingToken);
-	        }
-
-	        await _db.SaveChangesAsync();
+		        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register";
+		        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
 	        
-	        return new OkResult();
+		        _logger.LogInformation($"Authenticator created!");
+		        _logger.LogWarning($"Authenticator created!");
+
+		        var newToken = await authenticator.ExchangeAuthCodeForAccessTokenAsync(code);
+	        
+		        _logger.LogInformation($"Token exchanged!");
+		        _logger.LogWarning($"Token exchanged!");
+	        
+		        if (newToken == null)
+		        {
+			        _logger.LogError("Getting access token failed!");
+			        return new NotFoundResult();
+		        }
+
+		        var exitingToken = (from accessTokens in _db.AccessTokens
+			        where accessTokens.UserId == newToken.UserId
+			        select accessTokens).FirstOrDefault();
+		        if (exitingToken != null)
+		        {
+			        exitingToken.Scope = newToken.Scope;
+			        exitingToken.Token = newToken.Token;
+			        exitingToken.ExpiresIn = newToken.ExpiresIn;
+			        exitingToken.RefreshToken = newToken.RefreshToken;
+			        exitingToken.TokenType = newToken.TokenType;
+
+			        _db.AccessTokens.Update(exitingToken);
+		        }
+		        else
+		        {
+			        exitingToken = new AccessToken
+			        {
+				        UserId = newToken.UserId,
+				        Scope = newToken.Scope,
+				        Token = newToken.Token,
+				        ExpiresIn = newToken.ExpiresIn,
+				        RefreshToken = newToken.RefreshToken,
+				        TokenType = newToken.TokenType
+			        };
+
+			        await _db.AccessTokens.AddAsync(exitingToken);
+		        }
+
+		        await _db.SaveChangesAsync();
+	        
+		        return new OkResult();
+	        }
+	        catch (Exception e)
+	        {
+		        _logger.LogError(e, "Unhandled exception.");
+		        throw;
+	        }
         }
 
         [HttpGet]
