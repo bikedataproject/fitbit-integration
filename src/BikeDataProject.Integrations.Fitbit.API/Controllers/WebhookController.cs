@@ -67,7 +67,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 			        return new NotFoundResult();
 		        }
 
-		        var exitingToken = (from accessTokens in _db.AccessTokens
+		        var exitingToken = (from accessTokens in _db.Users
 			        where accessTokens.UserId == newToken.UserId
 			        select accessTokens).FirstOrDefault();
 		        if (exitingToken != null)
@@ -78,11 +78,11 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 			        exitingToken.RefreshToken = newToken.RefreshToken;
 			        exitingToken.TokenType = newToken.TokenType;
 
-			        _db.AccessTokens.Update(exitingToken);
+			        _db.Users.Update(exitingToken);
 		        }
 		        else
 		        {
-			        exitingToken = new AccessToken
+			        exitingToken = new User
 			        {
 				        UserId = newToken.UserId,
 				        Scope = newToken.Scope,
@@ -92,7 +92,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 				        TokenType = newToken.TokenType
 			        };
 
-			        await _db.AccessTokens.AddAsync(exitingToken);
+			        await _db.Users.AddAsync(exitingToken);
 		        }
 
 		        await _db.SaveChangesAsync();

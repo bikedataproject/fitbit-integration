@@ -9,6 +9,6 @@ namespace BikeDataProject.Integrations.Fitbit.Db
             
         }
         
-        public DbSet<AccessToken> AccessTokens { get; set; }
+        public DbSet<User> Users { get; set; }
     }
 }

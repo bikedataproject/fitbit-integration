@@ -2,7 +2,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace BikeDataProject.Integrations.Fitbit.API
 {
-    internal static class ConfigurationExtensions
+    internal static class IConfigurationExtensions
     {
         internal static (string deployTimeSettings, string envVarPrefix) GetDeployTimeSettings(this IConfigurationBuilder configurationBuilder)
         {

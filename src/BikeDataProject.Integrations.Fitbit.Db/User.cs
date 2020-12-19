@@ -2,7 +2,7 @@
 
 namespace BikeDataProject.Integrations.Fitbit.Db
 {
-    public class AccessToken
+    public class User
     {
         public int Id { get; set; }
         
@@ -17,5 +17,9 @@ namespace BikeDataProject.Integrations.Fitbit.Db
         public string RefreshToken { get; set; }
 
         public string UserId { get; set; }
+        
+        public bool AllSynced { get; set; }
+        
+        public DateTime? LatestSyncedStamp { get; set; }
     }
 }
