@@ -99,7 +99,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 
 		        await _db.SaveChangesAsync();
 	        
-		        return new OkResult();
+		        return Redirect(_configuration.LandingPage);
 	        }
 	        catch (Exception e)
 	        {
