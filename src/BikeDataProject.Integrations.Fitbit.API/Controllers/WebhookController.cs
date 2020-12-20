@@ -77,6 +77,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 			        exitingToken.ExpiresIn = newToken.ExpiresIn;
 			        exitingToken.RefreshToken = newToken.RefreshToken;
 			        exitingToken.TokenType = newToken.TokenType;
+			        exitingToken.TokenCreated = DateTime.UtcNow;
 
 			        _db.Users.Update(exitingToken);
 		        }
@@ -89,7 +90,8 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 				        Token = newToken.Token,
 				        ExpiresIn = newToken.ExpiresIn,
 				        RefreshToken = newToken.RefreshToken,
-				        TokenType = newToken.TokenType
+				        TokenType = newToken.TokenType,
+				        TokenCreated = DateTime.UtcNow
 			        };
 
 			        await _db.Users.AddAsync(exitingToken);

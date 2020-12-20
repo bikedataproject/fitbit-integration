@@ -18,6 +18,8 @@ namespace BikeDataProject.Integrations.Fitbit.Db
 
         public string UserId { get; set; }
         
+        public DateTime TokenCreated { get; set; }
+        
         public bool AllSynced { get; set; }
         
         public DateTime? LatestSyncedStamp { get; set; }

@@ -67,7 +67,7 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                 if (user == null) return;
 
                 // try to get historic activities.
-                var fitbitClient = new FitbitClient(fitbitAppCredentials, new OAuth2AccessToken()
+                var accessToken = new OAuth2AccessToken()
                 {
                     Scope = user.Scope,
                     ExpiresIn = user.ExpiresIn,
@@ -75,7 +75,26 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                     Token = user.Token,
                     TokenType = user.TokenType,
                     UserId = user.UserId
-                });
+                };
+                var fitbitClient = new FitbitClient(fitbitAppCredentials, accessToken);
+                
+                // refresh token if needed.
+                if (!accessToken.IsFresh(user.TokenCreated))
+                {
+                    // refresh token.
+                    accessToken = await fitbitClient.RefreshOAuth2TokenAsync();
+
+                    // update details.
+                    user.Scope = accessToken.Scope;
+                    user.Token = accessToken.Token;
+                    user.ExpiresIn = accessToken.ExpiresIn;
+                    user.RefreshToken = accessToken.RefreshToken;
+                    user.TokenType = accessToken.TokenType;
+                    user.TokenCreated = DateTime.UtcNow;
+                    _db.Users.Update(user);
+                    // ReSharper disable once MethodSupportsCancellation
+                    await _db.SaveChangesAsync();
+                }
 
                 // get activity types if needed.
                 // make sure to refresh once in a while.
@@ -132,6 +151,7 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                     
                     // get tcx.
                     var tcx = await fitbitClient.GetApiFreeResponseAsync(activity.TcxLink);
+                    var tcxParse = TCX.Parser.Parse(tcx); 
                     Console.WriteLine($"Bicycle: {activity.ActivityName}");
                 }
             }
