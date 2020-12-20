@@ -7,5 +7,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
         public FitbitAppCredentials FitbitAppCredentials { get; set; }
         
         public string SubscriptionVerificationCode { get; set; }
+        
+        public string LandingPage { get; set; }
     }
 }

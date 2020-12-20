@@ -48,7 +48,8 @@ namespace BikeDataProject.Integrations.Fitbit.API
             services.AddSingleton(new WebhookControllerSettings()
             {
                 FitbitAppCredentials = fitbitCredentials,
-                SubscriptionVerificationCode = subVerCode
+                SubscriptionVerificationCode = subVerCode,
+                LandingPage = _configuration["FITBIT_LANDING"]
             });
             
             // configure fitbit db access.

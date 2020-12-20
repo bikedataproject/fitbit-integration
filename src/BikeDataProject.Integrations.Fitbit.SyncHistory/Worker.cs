@@ -5,6 +5,7 @@ using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using BikeDataProject.DB.Domain;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Fitbit.Api.Portable.Models;
@@ -13,6 +14,7 @@ using Fitbit.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
+using User = BikeDataProject.DB.Domain.User;
 
 namespace BikeDataProject.Integrations.Fitbit.SyncHistory
 {
@@ -21,14 +23,16 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
         private readonly ILogger<Worker> _logger;
         private readonly IConfiguration _configuration;
         private readonly FitbitDbContext _db;
+        private readonly BikeDataDbContext _contributionsDb;
         private readonly HashSet<int> _activityTypes = new ();
 
         public Worker(ILogger<Worker> logger, IConfiguration configuration,
-            FitbitDbContext db)
+            FitbitDbContext db, BikeDataDbContext contributionsDb)
         {
             _logger = logger;
             _configuration = configuration;
             _db = db;
+            _contributionsDb = contributionsDb;
         }
 
         private DateTime _lastActivityTypeSync = DateTime.Now;
@@ -144,15 +148,23 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                 var after = user.LatestSyncedStamp ?? (new DateTime(1970, 1, 1)).ToUniversalTime();
                 var activities = await fitbitClient.GetActivityLogsListAsync(null, after);
                 if (activities?.Activities == null) return;
+
+                User? contributionsDbUser = null;
                 foreach (var activity in activities.Activities)
                 {
                     // if not a cycling activity, ignore.
                     if (!_activityTypes.Contains(activity.ActivityTypeId)) continue;
                     
+                    if (stoppingToken.IsCancellationRequested) break;
+                    
                     // get tcx.
                     var tcx = await fitbitClient.GetApiFreeResponseAsync(activity.TcxLink);
                     var tcxParse = TCX.Parser.Parse(tcx); 
-                    Console.WriteLine($"Bicycle: {activity.ActivityName}");
+                    
+                    // create user if needed.
+                    contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(user.UserId);
+                    
+                    
                 }
             }
             catch (Exception e)
