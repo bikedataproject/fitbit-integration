@@ -35,15 +35,15 @@ jobs:
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
     - name: Publish History Sync Service
       run: dotnet publish -c release
-      working-directory: ./src/BikeDataProject.Integrations.Fitbit.HistorySync/
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.SyncHistory/
     - name: Build History Sync Service Docker image
-      run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-history-sync:staging
-      working-directory: ./src/BikeDataProject.Integrations.Fitbit.HistorySync/
+      run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-sync-history:staging
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.SyncHistory/
     - name: Login to Dock Hub
       run: echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u xivk --password-stdin
     - name: Publish the API image to GitHub packages.
       run: docker push bikedataproject/fitbit-integration-api:staging
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
     - name: Publish the History Sync Service image to GitHub packages.
-      run: docker push bikedataproject/fitbit-integration-history-sync:staging
-      working-directory: ./src/BikeDataProject.Integrations.Fitbit.HistorySync/
+      run: docker push bikedataproject/fitbit-integration-sync-history:staging
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.SyncHistory/
