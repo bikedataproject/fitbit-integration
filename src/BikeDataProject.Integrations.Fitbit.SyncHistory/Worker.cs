@@ -2,19 +2,14 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-using BikeDataProject.DB.Domain;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
-using Fitbit.Api.Portable.Models;
 using Fitbit.Api.Portable.OAuth2;
-using Fitbit.Models;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
-using User = BikeDataProject.DB.Domain.User;
 
 namespace BikeDataProject.Integrations.Fitbit.SyncHistory
 {
@@ -23,11 +18,11 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
         private readonly ILogger<Worker> _logger;
         private readonly IConfiguration _configuration;
         private readonly FitbitDbContext _db;
-        private readonly BikeDataDbContext _contributionsDb;
+        private readonly DB.BikeDataDbContext _contributionsDb;
         private readonly HashSet<int> _activityTypes = new ();
 
         public Worker(ILogger<Worker> logger, IConfiguration configuration,
-            FitbitDbContext db, BikeDataDbContext contributionsDb)
+            FitbitDbContext db, DB.BikeDataDbContext contributionsDb)
         {
             _logger = logger;
             _configuration = configuration;
@@ -149,7 +144,7 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                 var activities = await fitbitClient.GetActivityLogsListAsync(null, after);
                 if (activities?.Activities == null) return;
 
-                User? contributionsDbUser = null;
+                DB.User? contributionsDbUser = null;
                 foreach (var activity in activities.Activities)
                 {
                     // if not a cycling activity, ignore.
@@ -157,14 +152,39 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                     
                     if (stoppingToken.IsCancellationRequested) break;
                     
+                    // check if activity with log id was already included.
+                    if (_db.UserHasContributionWithLogId(user, activity.LogId)) continue;
+                    
                     // get tcx.
                     var tcx = await fitbitClient.GetApiFreeResponseAsync(activity.TcxLink);
-                    var tcxParse = TCX.Parser.Parse(tcx); 
+                    var tcxParsed = TCX.Parser.Parse(tcx); 
+                    if (tcxParsed == null) continue;
                     
-                    // create user if needed.
+                    // create user in contributions db if needed and keep the id.
                     contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(user.UserId);
+                    if (user.BikeDataProjectId == null)
+                    {
+                        // update the local user with the user id in the contributions db.
+                        user.BikeDataProjectId = contributionsDbUser.Id;
+                        _db.Update(user);
+                        await _db.SaveChangesAsync();
+                    }
                     
-                    
+                    // convert to contributions.
+                    foreach (var contribution in tcxParsed.ToContributions())
+                    {
+                        await _contributionsDb.Contributions.AddAsync(contribution);
+                        await _contributionsDb.SaveChangesAsync();
+
+                        var fitBitContribution = new Contribution()
+                        {
+                            UserId = user.Id,
+                            BikeDataProjectId = contribution.ContributionId,
+                            FitBitLogId = activity.LogId
+                        };
+                        await _db.Contributions.AddAsync(fitBitContribution);
+                        await _db.SaveChangesAsync();
+                    }
                 }
             }
             catch (Exception e)

@@ -1,7 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading.Tasks;
-using BikeDataProject.DB.Domain;
+using BikeDataProject.DB;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
@@ -47,7 +47,8 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                                 ServiceLifetime.Singleton);
                             
                             services.AddDbContext<BikeDataDbContext>(o => o.UseNpgsql(
-                                File.ReadAllText(hostingContext.Configuration["DB"])));
+                                File.ReadAllText(hostingContext.Configuration["DB"])),
+                                ServiceLifetime.Singleton);
                             
                             // add the service.
                             services.AddHostedService<Worker>();
