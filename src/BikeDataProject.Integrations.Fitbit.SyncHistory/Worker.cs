@@ -64,86 +64,20 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                 
                 // no user found without history unsynced.
                 if (user == null) return;
-
-                // try to get historic activities.
-                var accessToken = new OAuth2AccessToken()
-                {
-                    Scope = user.Scope,
-                    ExpiresIn = user.ExpiresIn,
-                    RefreshToken = user.RefreshToken,
-                    Token = user.Token,
-                    TokenType = user.TokenType,
-                    UserId = user.UserId
-                };
-                var fitbitClient = new FitbitClient(fitbitAppCredentials, accessToken);
                 
-                // refresh token if needed.
-                if (!accessToken.IsFresh(user.TokenCreated))
-                {
-                    // refresh token.
-                    accessToken = await fitbitClient.RefreshOAuth2TokenAsync();
-
-                    // update details.
-                    user.Scope = accessToken.Scope;
-                    user.Token = accessToken.Token;
-                    user.ExpiresIn = accessToken.ExpiresIn;
-                    user.RefreshToken = accessToken.RefreshToken;
-                    user.TokenType = accessToken.TokenType;
-                    user.TokenCreated = DateTime.UtcNow;
-                    _db.Users.Update(user);
-                    // ReSharper disable once MethodSupportsCancellation
-                    await _db.SaveChangesAsync();
-                }
+                // create fitbit client configured for the given user.
+                var fitbitClient = await this.CreateFitbitClient(fitbitAppCredentials, user);
 
                 // get activity types if needed.
                 // make sure to refresh once in a while.
-                if ((DateTime.Now - _lastActivityTypeSync).TotalHours > 2)
-                {
-                    _activityTypes.Clear();
-                }
-                if (_activityTypes.Count == 0)
-                {
-                    // get activity types.
-                    var types = await fitbitClient.GetActivityCategoryListAsync();
-                    
-                    // the activity id with name 'Bicycling'.
-                    foreach (var category in types.Categories)
-                    {
-                        if (category.Name == "Bicycling")
-                        {
-                            foreach (var activity in category.Activities)
-                            {
-                                _activityTypes.Add(activity.Id);
-                            }
-                        }
+                if (!await this.SyncActivityTypes(fitbitClient)) return;
 
-                        if (category.SubCategories == null) continue;
-                        
-                        foreach (var subCategory in category.SubCategories)
-                        {
-                            if (subCategory.Name == "Bicycling")
-                            {
-                                foreach (var activity in subCategory.Activities)
-                                {
-                                    _activityTypes.Add(activity.Id);
-                                }
-                            }
-                        }
-                    }
-
-                    if (_activityTypes.Count == 0)
-                    {
-                        _logger.LogCritical("Bicycling activity types not found, cannot synchronize activities without them.");
-                    }
-                    
-                    _lastActivityTypeSync = DateTime.Now;
-                }
-                
                 // get cycling activities.
                 var after = user.LatestSyncedStamp ?? (new DateTime(1970, 1, 1)).ToUniversalTime();
                 var activities = await fitbitClient.GetActivityLogsListAsync(null, after);
                 if (activities?.Activities == null) return;
 
+                // sync all activities.
                 DB.User? contributionsDbUser = null;
                 foreach (var activity in activities.Activities)
                 {
@@ -156,34 +90,16 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                     if (_db.UserHasContributionWithLogId(user, activity.LogId)) continue;
                     
                     // get tcx.
-                    var tcx = await fitbitClient.GetApiFreeResponseAsync(activity.TcxLink);
-                    var tcxParsed = TCX.Parser.Parse(tcx); 
+                    var tcxParsed = await fitbitClient.GetTcxForActivity(activity);
                     if (tcxParsed == null) continue;
                     
                     // create user in contributions db if needed and keep the id.
-                    contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(user.UserId);
-                    if (user.BikeDataProjectId == null)
-                    {
-                        // update the local user with the user id in the contributions db.
-                        user.BikeDataProjectId = contributionsDbUser.Id;
-                        _db.Update(user);
-                        await _db.SaveChangesAsync();
-                    }
+                    contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(_db, user);
                     
                     // convert to contributions.
                     foreach (var contribution in tcxParsed.ToContributions())
                     {
-                        await _contributionsDb.Contributions.AddAsync(contribution);
-                        await _contributionsDb.SaveChangesAsync();
-
-                        var fitBitContribution = new Contribution()
-                        {
-                            UserId = user.Id,
-                            BikeDataProjectId = contribution.ContributionId,
-                            FitBitLogId = activity.LogId
-                        };
-                        await _db.Contributions.AddAsync(fitBitContribution);
-                        await _db.SaveChangesAsync();
+                        await _contributionsDb.SaveContribution(_db, contribution, user, activity.LogId);
                     }
                 }
             }
@@ -191,6 +107,64 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
             {
                 _logger.LogCritical(e, "Unhandled exception.");
             }
+        }
+
+        private async Task<FitbitClient> CreateFitbitClient(FitbitAppCredentials fitbitAppCredentials, User user)
+        {
+            // try to get historic activities.
+            var accessToken = new OAuth2AccessToken()
+            {
+                Scope = user.Scope,
+                ExpiresIn = user.ExpiresIn,
+                RefreshToken = user.RefreshToken,
+                Token = user.Token,
+                TokenType = user.TokenType,
+                UserId = user.UserId
+            };
+            var fitbitClient = new FitbitClient(fitbitAppCredentials, accessToken);
+                
+            // refresh token if needed.
+            if (!accessToken.IsFresh(user.TokenCreated))
+            {
+                // refresh token.
+                accessToken = await fitbitClient.RefreshOAuth2TokenAsync();
+
+                // update details.
+                user.Scope = accessToken.Scope;
+                user.Token = accessToken.Token;
+                user.ExpiresIn = accessToken.ExpiresIn;
+                user.RefreshToken = accessToken.RefreshToken;
+                user.TokenType = accessToken.TokenType;
+                user.TokenCreated = DateTime.UtcNow;
+                _db.Users.Update(user);
+                // ReSharper disable once MethodSupportsCancellation
+                await _db.SaveChangesAsync();
+            }
+
+            return fitbitClient;
+        }
+
+        private async Task<bool> SyncActivityTypes(FitbitClient fitbitClient)
+        {
+            if ((DateTime.Now - _lastActivityTypeSync).TotalHours > 2)
+            {
+                _activityTypes.Clear();
+            }
+            
+            if (_activityTypes.Count == 0)
+            {
+                _activityTypes.UnionWith(await fitbitClient.GetBicycleActivityTypes());
+                    
+                _lastActivityTypeSync = DateTime.Now;
+            }
+            
+            if (_activityTypes.Count == 0)
+            {
+                _logger.LogCritical("Bicycling activity types not found, cannot synchronize activities without them.");
+                return false;
+            }
+
+            return true;
         }
     }
 }

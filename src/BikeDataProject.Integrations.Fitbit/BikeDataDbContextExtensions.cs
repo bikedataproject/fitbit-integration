@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BikeDataProject.DB;
+using BikeDataProject.Integrations.Fitbit.Db;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 using TCX.Domain;
@@ -12,28 +12,36 @@ namespace BikeDataProject.Integrations.Fitbit
 {
     public static class BikeDataDbContextExtensions
     {
-        public static async Task<User> CreateOrGetUser(this BikeDataDbContext dbContext, string userId,
+        public static async Task<DB.User> CreateOrGetUser(this DB.BikeDataDbContext dbContext, FitbitDbContext db, User fitbitUser,
             string provider = Constants.FitbitProviderName)
         {
             var user = (from u in dbContext.Users
-                where u.ProviderUser == userId &&
+                where u.ProviderUser == fitbitUser.UserId &&
                       u.Provider == provider
                 select u).FirstOrDefault();
             if (user == null)
             {
-                user = new User()
+                user = new DB.User()
                 {
                     Provider = Constants.FitbitProviderName,
-                    ProviderUser = userId
+                    ProviderUser = fitbitUser.UserId
                 };
                 await dbContext.Users.AddAsync(user);
                 await dbContext.SaveChangesAsync();
             }
 
+            if (fitbitUser.BikeDataProjectId == null)
+            {
+                // update the local user with the user id in the contributions db.
+                fitbitUser.BikeDataProjectId = user.Id;
+                db.Update(user);
+                await db.SaveChangesAsync();
+            }
+
             return user;
         }
 
-        public static IEnumerable<Contribution>? ToContributions(this TrainingCenterDatabase tcx)
+        public static IEnumerable<DB.Contribution>? ToContributions(this TrainingCenterDatabase tcx)
         {
             if (tcx.Activities?.Activity == null) yield break;
             foreach (var a in tcx.Activities.Activity)
@@ -61,7 +69,7 @@ namespace BikeDataProject.Integrations.Fitbit
                     var first = timestamps.First();
                     var last = timestamps.Last();
                     var geometry = new LineString(coordinates.ToArray());
-                    yield return new Contribution()
+                    yield return new DB.Contribution()
                     {
                         Distance = (int) distance,
                         Duration = (int) ((last - first).TotalSeconds),
@@ -74,6 +82,22 @@ namespace BikeDataProject.Integrations.Fitbit
                     };
                 }
             }
+        }
+
+        public static async Task SaveContribution(this DB.BikeDataDbContext dbContext, FitbitDbContext db,
+            DB.Contribution contribution, User fitbitUser, long logId)
+        {
+            await dbContext.Contributions.AddAsync(contribution);
+            await dbContext.SaveChangesAsync();
+
+            var fitBitContribution = new Contribution()
+            {
+                UserId = fitbitUser.Id,
+                BikeDataProjectId = contribution.ContributionId,
+                FitBitLogId = logId
+            };
+            await db.Contributions.AddAsync(fitBitContribution);
+            await db.SaveChangesAsync();
         }
     }
 }
