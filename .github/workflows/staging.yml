@@ -27,14 +27,22 @@ jobs:
       run: dotnet build --no-restore
     - name: Test
       run: dotnet test --no-build --verbosity normal
-    - name: Publish project
+    - name: Publish API
       run: dotnet publish -c release
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
-    - name: Build the Docker image
+    - name: Build API Docker image
       run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-api:staging
-      working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
+    - name: Publish History Sync Service
+      run: dotnet publish -c release
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.HistorySync/
+    - name: Build History Sync Service Docker image
+      run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-history-sync:staging
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.HistorySync/
     - name: Login to Dock Hub
       run: echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u xivk --password-stdin
-    - name: Publish the image to GitHub packages.
+    - name: Publish the API image to GitHub packages.
       run: docker push bikedataproject/fitbit-integration-api:staging
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
+    - name: Publish the History Sync Service image to GitHub packages.
+      run: docker push bikedataproject/fitbit-integration-history-sync:staging
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.HistorySync/
