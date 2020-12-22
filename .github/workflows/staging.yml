@@ -32,6 +32,7 @@ jobs:
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
     - name: Build API Docker image
       run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-api:staging
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.API/
     - name: Publish History Sync Service
       run: dotnet publish -c release
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.HistorySync/
