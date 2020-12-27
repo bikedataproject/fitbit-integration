@@ -4,14 +4,15 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using BikeDataProject.Integrations.Fitbit;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
-using Fitbit.Api.Portable.OAuth2;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace BikeDataProject.Integrations.Fitbit.SyncHistory
+namespace BikeDataProject.Integrations.FitBit.Subscriber
 {
     public class Worker : BackgroundService
     {
@@ -58,12 +59,13 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
         {
             try
             {
-                var user = (from users in _db.Users
-                    where users.AllSynced == false
-                    select users).FirstOrDefault();
-                
-                // no user found without history unsynced.
-                if (user == null) return;
+                var updatedResource = _db.UserUpdatedResources
+                    .Where(x => !x.Synced)
+                    .Include(x => x.User).FirstOrDefault();
+
+                // no un synced updated resources.
+                if (updatedResource == null) return;
+                var user = updatedResource.User;
                 
                 // create fitbit client configured for the given user.
                 var (fitbitClient, userModified) = await fitbitAppCredentials.CreateFitbitClientForUser(user);
@@ -79,8 +81,7 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                 if (!await this.SyncActivityTypes(fitbitClient)) return;
 
                 // get cycling activities.
-                var after = user.LatestSyncedStamp ?? (new DateTime(1970, 1, 1)).ToUniversalTime();
-                var activities = await fitbitClient.GetActivityLogsListAsync(null, after);
+                var activities = await fitbitClient.GetActivityLogsListAsync(updatedResource.Day);
                 if (activities?.Activities == null) return;
 
                 // sync all activities.
@@ -108,6 +109,12 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                         await _contributionsDb.SaveContribution(_db, contribution, user, activity.LogId);
                     }
                 }
+                
+                // set as synced.
+                updatedResource.Synced = true;
+                _db.UserUpdatedResources.Update(updatedResource);
+                // ReSharper disable once MethodSupportsCancellation
+                await _db.SaveChangesAsync();
             }
             catch (Exception e)
             {

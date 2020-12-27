@@ -54,6 +54,11 @@ namespace BikeDataProject.Integrations.Fitbit.Db
         public bool AllSynced { get; set; }
         
         /// <summary>
+        /// Gets or sets the subscription id used.
+        /// </summary>
+        public string SubscriptionId { get; set; }
+        
+        /// <summary>
         /// The timestamp of the latest synced activity.
         /// </summary>
         public DateTime? LatestSyncedStamp { get; set; }

@@ -11,5 +11,13 @@ namespace BikeDataProject.Integrations.Fitbit.Db
                 select c).FirstOrDefault();
             return contribution != null;
         }
+
+        public static User GetUserForSubscription(this FitbitDbContext db, string subscriptionId)
+        {
+            var user = (from u in db.Users
+                where u.SubscriptionId == subscriptionId
+                select u).FirstOrDefault();
+            return user;
+        }
     }
 }

@@ -11,5 +11,6 @@ namespace BikeDataProject.Integrations.Fitbit.Db
         
         public DbSet<User> Users { get; set; }
         public DbSet<Contribution> Contributions { get; set; }
+        public DbSet<UserUpdatedResource> UserUpdatedResources { get; set; }
     }
 }
