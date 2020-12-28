@@ -1,21 +1,12 @@
-using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Net;
-using System.Threading.Tasks;
 using BikeDataProject.Integrations.Fitbit.API.Controllers;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.AspNetCore.HttpsPolicy;
-using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Serilog;
 
 namespace BikeDataProject.Integrations.Fitbit.API
@@ -44,11 +35,9 @@ namespace BikeDataProject.Integrations.Fitbit.API
                 ClientId = _configuration["FITBIT_CLIENT_ID"],
                 ClientSecret = File.ReadAllText(_configuration["FITBIT_CLIENT_SECRET"])
             };
-            var subVerCode = File.ReadAllText(_configuration["FITBIT_SUB_VER_CODE"]);
             services.AddSingleton(new WebhookControllerSettings()
             {
                 FitbitAppCredentials = fitbitCredentials,
-                SubscriptionVerificationCode = subVerCode,
                 LandingPage = _configuration["FITBIT_LANDING"]
             });
             
