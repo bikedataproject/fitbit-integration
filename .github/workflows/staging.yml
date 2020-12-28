@@ -54,5 +54,5 @@ jobs:
       run: docker push bikedataproject/fitbit-integration-sync-history:staging
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.SyncHistory/
     - name: Publish the Subscriber Service image to GitHub packages.
-      run: docker push bikedataproject/fitbit-integration-sync-history:staging
+      run: docker push bikedataproject/fitbit-integration-subscriber:staging
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.Subscriber/
