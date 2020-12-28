@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using BikeDataProject.Integrations.Fitbit;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
+using Fitbit.Models;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
@@ -35,7 +36,7 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
         
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var refreshTime = _configuration.GetValueOrDefault<int>("refresh-time", 1000);
+            var refreshTime = _configuration.GetValueOrDefault("refresh-time", 1000);
             
             // read/parse fitbit configurations.
             var fitbitCredentials = new FitbitAppCredentials()
@@ -49,23 +50,71 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
-                await this.RunAsync(fitbitCredentials, stoppingToken);
+                // await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
+                // if (stoppingToken.IsCancellationRequested) continue;
+                //
+                // await this.SyncDays(fitbitCredentials, stoppingToken);
+                // if (stoppingToken.IsCancellationRequested) continue;
                 
                 await Task.Delay(refreshTime, stoppingToken);
             }
         }
 
-        private async Task RunAsync(FitbitAppCredentials fitbitAppCredentials, CancellationToken stoppingToken)
+        private async Task SetupSubscriptions(FitbitAppCredentials fitbitAppCredentials, CancellationToken stoppingToken)
         {
             try
             {
-                var updatedResource = _db.UserUpdatedResources
+                var usersWithoutSubscription = _db.Users
+                    .Where(x => x.AllSynced && x.SubscriptionId == null);
+
+                foreach (var user in usersWithoutSubscription)
+                {
+                    if (stoppingToken.IsCancellationRequested) break;
+
+                    try
+                    {
+                        // create fitbit client configured for the given user.
+                        var (fitbitClient, userModified) = await fitbitAppCredentials.CreateFitbitClientForUser(user);
+                        if (userModified)
+                        {
+                            _db.Users.Update(user);
+                            // ReSharper disable once MethodSupportsCancellation
+                            await _db.SaveChangesAsync();
+                        }
+
+                        // register subscription.
+                        var subscriptionId = Guid.NewGuid().ToString();
+                        var apiSubscription = await fitbitClient.AddSubscriptionAsync(APICollectionType.activities, subscriptionId);
+
+                        // store the subscription.
+                        user.SubscriptionId = subscriptionId;
+                        _db.Users.Update(user);
+                        // ReSharper disable once MethodSupportsCancellation
+                        await _db.SaveChangesAsync();
+                    }
+                    catch (Exception e)
+                    {
+                        _logger.LogError(e, "Failed to create subscription.");
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                _logger.LogCritical(e, "Unhandled exception.");
+            }
+        }
+
+        private async Task SyncDays(FitbitAppCredentials fitbitAppCredentials, CancellationToken stoppingToken)
+        {
+            try
+            {
+                var dayToSync = _db.DaysToSync
                     .Where(x => !x.Synced)
                     .Include(x => x.User).FirstOrDefault();
 
                 // no un synced updated resources.
-                if (updatedResource == null) return;
-                var user = updatedResource.User;
+                if (dayToSync == null) return;
+                var user = dayToSync.User;
                 
                 // create fitbit client configured for the given user.
                 var (fitbitClient, userModified) = await fitbitAppCredentials.CreateFitbitClientForUser(user);
@@ -81,7 +130,7 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                 if (!await this.SyncActivityTypes(fitbitClient)) return;
 
                 // get cycling activities.
-                var activities = await fitbitClient.GetActivityLogsListAsync(updatedResource.Day);
+                var activities = await fitbitClient.GetActivityLogsListAsync(dayToSync.Day);
                 if (activities?.Activities == null) return;
 
                 // sync all activities.
@@ -111,8 +160,8 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                 }
                 
                 // set as synced.
-                updatedResource.Synced = true;
-                _db.UserUpdatedResources.Update(updatedResource);
+                dayToSync.Synced = true;
+                _db.DaysToSync.Update(dayToSync);
                 // ReSharper disable once MethodSupportsCancellation
                 await _db.SaveChangesAsync();
             }

@@ -42,7 +42,8 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                             
                             config.AddJsonFile(deployTimeSettings, true, true);
                             config.AddEnvironmentVariables((c) => { c.Prefix = envVarPrefix; });
-                        }).ConfigureServices((hostingContext, services) =>
+                        })
+                        .ConfigureServices((hostingContext, services) =>
                         {
                             services.AddDbContext<FitbitDbContext>(o => o.UseNpgsql(
                                     File.ReadAllText(hostingContext.Configuration["FITBIT_DB"])),
@@ -53,7 +54,12 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                                 ServiceLifetime.Singleton);
                             
                             services.AddHostedService<Worker>();
-                        }).UseStartup<Startup>().Build();
+                        })
+                        .UseStartup<Startup>()
+                        .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration
+                            .ReadFrom.Configuration(hostingContext.Configuration)
+                            .Enrich.FromLogContext())
+                        .Build();
 
                     // run!
                     await host.RunAsync();

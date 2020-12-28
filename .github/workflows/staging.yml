@@ -39,6 +39,12 @@ jobs:
     - name: Build History Sync Service Docker image
       run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-sync-history:staging
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.SyncHistory/
+    - name: Publish Subscriber Service
+      run: dotnet publish -c release
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.Subscriber/
+    - name: Build Subscriber Docker image
+      run: docker build . --file Dockerfile --tag bikedataproject/fitbit-integration-subscriber:staging
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.Subscriber/
     - name: Login to Dock Hub
       run: echo ${{ secrets.DOCKER_HUB_TOKEN }} | docker login -u xivk --password-stdin
     - name: Publish the API image to GitHub packages.
@@ -47,3 +53,6 @@ jobs:
     - name: Publish the History Sync Service image to GitHub packages.
       run: docker push bikedataproject/fitbit-integration-sync-history:staging
       working-directory: ./src/BikeDataProject.Integrations.Fitbit.SyncHistory/
+    - name: Publish the Subscriber Service image to GitHub packages.
+      run: docker push bikedataproject/fitbit-integration-sync-history:staging
+      working-directory: ./src/BikeDataProject.Integrations.Fitbit.Subscriber/

@@ -2,7 +2,7 @@ using System;
 
 namespace BikeDataProject.Integrations.Fitbit.Db
 {
-    public class UserUpdatedResource
+    public class DayToSync
     {
         /// <summary>
         /// The id.
@@ -20,7 +20,7 @@ namespace BikeDataProject.Integrations.Fitbit.Db
         public User User { get; set; }
         
         /// <summary>
-        /// The day of the unsynced activity.
+        /// The day of the un synced activity.
         /// </summary>
         public DateTime Day { get; set; }
         
