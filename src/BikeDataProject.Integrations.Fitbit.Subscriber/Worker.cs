@@ -50,8 +50,8 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
-                await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
-                if (stoppingToken.IsCancellationRequested) continue;
+                // await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
+                // if (stoppingToken.IsCancellationRequested) continue;
                 
                 // await this.SyncDays(fitbitCredentials, stoppingToken);
                 // if (stoppingToken.IsCancellationRequested) continue;
