@@ -3,15 +3,17 @@ using System;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 
 namespace BikeDataProject.Integrations.Fitbit.Db.Migrations
 {
     [DbContext(typeof(FitbitDbContext))]
-    partial class FitbitDbContextModelSnapshot : ModelSnapshot
+    [Migration("20201228185942_DayToSync")]
+    partial class DayToSync
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
