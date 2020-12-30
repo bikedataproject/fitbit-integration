@@ -63,7 +63,6 @@ namespace BikeDataProject.Integrations.FitBit.API.Controllers
 		{
 			try
 			{
-				var subscriptionManager = new SubscriptionManager();
 				List<UpdatedResource> updatedResources; //all the updated users and which resources
 
 				using (var sr = new StreamReader(Request.Body))
@@ -73,8 +72,7 @@ namespace BikeDataProject.Integrations.FitBit.API.Controllers
 					
 					_logger.LogWarning($"Fitbit subscription post: {responseText}");
 
-					responseText = subscriptionManager.StripSignatureString(responseText);
-					updatedResources = subscriptionManager.ProcessUpdateReponseBody(responseText);
+					updatedResources = SubscriptionManager.ProcessUpdateReponseBody(responseText);
 				}
 
 				foreach (var updatedResource in updatedResources)
