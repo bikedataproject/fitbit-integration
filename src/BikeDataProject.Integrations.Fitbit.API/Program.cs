@@ -48,11 +48,11 @@ namespace BikeDataProject.Integrations.Fitbit.API
                         {
                             services.AddDbContext<FitbitDbContext>(o => o.UseNpgsql(
                                     File.ReadAllText(hostingContext.Configuration["FITBIT_DB"])),
-                                ServiceLifetime.Singleton);
+                                ServiceLifetime.Transient);
                             
                             services.AddDbContext<DB.BikeDataDbContext>(o => o.UseNpgsql(
                                     File.ReadAllText(hostingContext.Configuration["DB"])),
-                                ServiceLifetime.Singleton);
+                                ServiceLifetime.Transient);
                             
                             services.AddHostedService<SubscriptionManagerWorker>();
                             services.AddHostedService<SubscriptionSyncWorker>();
