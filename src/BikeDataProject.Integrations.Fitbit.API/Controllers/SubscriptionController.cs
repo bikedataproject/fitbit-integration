@@ -68,8 +68,10 @@ namespace BikeDataProject.Integrations.FitBit.API.Controllers
 
 				using (var sr = new StreamReader(Request.Body))
 				{
-					var responseText = sr.ReadToEnd();
+					var responseText = await sr.ReadToEndAsync();
 					//note, you can store the raw response from fitbit here if you like
+					
+					_logger.LogDebug($"Fitbit subscription post: {responseText}");
 
 					responseText = subscriptionManager.StripSignatureString(responseText);
 					updatedResources = subscriptionManager.ProcessUpdateReponseBody(responseText);
