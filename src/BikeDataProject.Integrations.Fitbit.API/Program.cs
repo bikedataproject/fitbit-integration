@@ -2,6 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using BikeDataProject.Integrations.Fitbit.API.Workers;
+using BikeDataProject.Integrations.FitBit.API.Workers;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
@@ -55,6 +56,7 @@ namespace BikeDataProject.Integrations.Fitbit.API
                             
                             services.AddHostedService<SubscriptionManagerWorker>();
                             services.AddHostedService<SubscriptionSyncWorker>();
+                            services.AddHostedService<HistorySyncWorker>();
                         })
                         .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration
                             .ReadFrom.Configuration(hostingContext.Configuration)

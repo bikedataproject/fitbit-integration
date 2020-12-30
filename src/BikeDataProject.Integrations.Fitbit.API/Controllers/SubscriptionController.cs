@@ -32,7 +32,7 @@ namespace BikeDataProject.Integrations.FitBit.API.Controllers
 		private DateTime _lastActivityTypeSync = DateTime.Now;
 
 		[HttpGet]
-		[Route("/")]
+		[Route("subscriptions")]
 		public IActionResult Verify([FromQuery] string? verify)
 		{
 			try
@@ -58,7 +58,7 @@ namespace BikeDataProject.Integrations.FitBit.API.Controllers
 		}
 
 		[HttpPost]
-		[Route("/")]
+		[Route("subscriptions")]
 		public async Task<IActionResult> SubscriptionData()
 		{
 			try
