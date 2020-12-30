@@ -4,8 +4,8 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 {
     public class WebhookControllerSettings
     {
-        public FitbitAppCredentials FitbitAppCredentials { get; set; }
+        public FitbitAppCredentials FitbitAppCredentials { get; init; }
         
-        public string LandingPage { get; set; }
+        public string LandingPage { get; init; }
     }
 }

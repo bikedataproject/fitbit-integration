@@ -4,7 +4,7 @@ using Fitbit.Api.Portable;
 using Fitbit.Api.Portable.Models;
 using TCX.Domain;
 
-namespace BikeDataProject.Integrations.Fitbit
+namespace BikeDataProject.Integrations.Fitbit.API
 {
     public static class FitbitClientExtensions
     {

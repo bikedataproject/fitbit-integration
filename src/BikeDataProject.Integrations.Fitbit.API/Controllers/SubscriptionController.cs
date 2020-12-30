@@ -3,14 +3,14 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using BikeDataProject.Integrations.Fitbit;
+using BikeDataProject.Integrations.Fitbit.API;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Fitbit.Models;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 
-namespace BikeDataProject.Integrations.FitBit.Subscriber.Controllers
+namespace BikeDataProject.Integrations.FitBit.API.Controllers
 {
 	[ApiController]
 	public class SubscriptionController : ControllerBase

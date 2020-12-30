@@ -1,15 +1,13 @@
 using System;
-using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Threading.Tasks;
-using Fitbit.Api.Portable;
+using BikeDataProject.Integrations.Fitbit.API.Workers;
+using BikeDataProject.Integrations.Fitbit.Db;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
-using Microsoft.Extensions.Logging;
 using Serilog;
 using Serilog.Formatting.Json;
 
@@ -44,7 +42,24 @@ namespace BikeDataProject.Integrations.Fitbit.API
                             
                             config.AddJsonFile(deployTimeSettings, true, true);
                             config.AddEnvironmentVariables((c) => { c.Prefix = envVarPrefix; });
-                        }).UseStartup<Startup>().Build();
+                        })
+                        .ConfigureServices((hostingContext, services) =>
+                        {
+                            services.AddDbContext<FitbitDbContext>(o => o.UseNpgsql(
+                                    File.ReadAllText(hostingContext.Configuration["FITBIT_DB"])),
+                                ServiceLifetime.Singleton);
+                            
+                            services.AddDbContext<DB.BikeDataDbContext>(o => o.UseNpgsql(
+                                    File.ReadAllText(hostingContext.Configuration["DB"])),
+                                ServiceLifetime.Singleton);
+                            
+                            services.AddHostedService<SubscriptionManagerWorker>();
+                            services.AddHostedService<SubscriptionSyncWorker>();
+                        })
+                        .UseSerilog((hostingContext, loggerConfiguration) => loggerConfiguration
+                            .ReadFrom.Configuration(hostingContext.Configuration)
+                            .Enrich.FromLogContext())
+                        .UseStartup<Startup>().Build();
 
                     // run!
                     await host.RunAsync();

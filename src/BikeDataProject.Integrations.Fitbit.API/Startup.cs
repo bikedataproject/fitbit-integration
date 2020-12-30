@@ -1,5 +1,6 @@
 using System.IO;
 using BikeDataProject.Integrations.Fitbit.API.Controllers;
+using BikeDataProject.Integrations.FitBit.API.Controllers;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Microsoft.AspNetCore.Builder;
@@ -24,9 +25,6 @@ namespace BikeDataProject.Integrations.Fitbit.API
         public void ConfigureServices(IServiceCollection services)
         {
             // setup logging.
-            Log.Logger = new LoggerConfiguration()
-                .ReadFrom.Configuration(_configuration)
-                .CreateLogger();
             services.AddLogging(b => { b.AddSerilog(); });
             
             // read/parse fitbit configurations.
@@ -39,6 +37,12 @@ namespace BikeDataProject.Integrations.Fitbit.API
             {
                 FitbitAppCredentials = fitbitCredentials,
                 LandingPage = _configuration["FITBIT_LANDING"]
+            });
+            var subVerCode = File.ReadAllText(_configuration["FITBIT_SUB_VER_CODE"]);
+            services.AddSingleton(new SubscriptionControllerSettings()
+            {
+                FitbitAppCredentials = fitbitCredentials,
+                SubscriptionVerificationCode = subVerCode
             });
             
             // configure fitbit db access.

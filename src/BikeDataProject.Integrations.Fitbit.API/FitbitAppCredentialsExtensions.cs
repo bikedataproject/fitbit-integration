@@ -4,7 +4,7 @@ using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Fitbit.Api.Portable.OAuth2;
 
-namespace BikeDataProject.Integrations.Fitbit
+namespace BikeDataProject.Integrations.Fitbit.API
 {
     public static class FitbitAppCredentialsExtensions
     {

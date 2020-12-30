@@ -1,14 +1,13 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
 using System.Threading.Tasks;
 using BikeDataProject.Integrations.Fitbit.Db;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 using TCX.Domain;
 
-namespace BikeDataProject.Integrations.Fitbit
+namespace BikeDataProject.Integrations.Fitbit.API
 {
     public static class BikeDataDbContextExtensions
     {

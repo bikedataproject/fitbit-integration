@@ -1,14 +1,9 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using BikeDataProject.Integrations.Fitbit.Db;
-using Fitbit.Api.Portable;
 using Fitbit.Api.Portable.OAuth2;
-using Fitbit.Models;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore.Query.SqlExpressions;
 using Microsoft.Extensions.Logging;
 
 namespace BikeDataProject.Integrations.Fitbit.API.Controllers

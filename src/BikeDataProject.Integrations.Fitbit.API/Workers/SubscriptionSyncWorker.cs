@@ -6,22 +6,21 @@ using System.Threading;
 using System.Threading.Tasks;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
-using Fitbit.Api.Portable.OAuth2;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace BikeDataProject.Integrations.Fitbit.SyncHistory
+namespace BikeDataProject.Integrations.Fitbit.API.Workers
 {
-    public class Worker : BackgroundService
+    public class SubscriptionSyncWorker : BackgroundService
     {
-        private readonly ILogger<Worker> _logger;
+        private readonly ILogger<SubscriptionSyncWorker> _logger;
         private readonly IConfiguration _configuration;
         private readonly FitbitDbContext _db;
         private readonly DB.BikeDataDbContext _contributionsDb;
         private readonly HashSet<int> _activityTypes = new ();
 
-        public Worker(ILogger<Worker> logger, IConfiguration configuration,
+        public SubscriptionSyncWorker(ILogger<SubscriptionSyncWorker> logger, IConfiguration configuration,
             FitbitDbContext db, DB.BikeDataDbContext contributionsDb)
         {
             _logger = logger;
@@ -62,7 +61,7 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                     where users.AllSynced == false
                     select users).FirstOrDefault();
                 
-                // no user found without history unsynced.
+                // no user found without history un synced.
                 if (user == null) return;
                 
                 // create fitbit client configured for the given user.
@@ -103,7 +102,9 @@ namespace BikeDataProject.Integrations.Fitbit.SyncHistory
                     contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(_db, user);
                     
                     // convert to contributions.
-                    foreach (var contribution in tcxParsed.ToContributions())
+                    var parseContributions = tcxParsed.ToContributions();
+                    if (parseContributions == null) continue;
+                    foreach (var contribution in parseContributions)
                     {
                         await _contributionsDb.SaveContribution(_db, contribution, user, activity.LogId);
                     }

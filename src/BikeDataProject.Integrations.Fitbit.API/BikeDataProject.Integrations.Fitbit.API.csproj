@@ -7,7 +7,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Fitbit.NET" Version="2.3.0" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="5.0.1" NoWarn="NU1605" />
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" Version="5.0.1" NoWarn="NU1605" />
     <PackageReference Include="Serilog.AspNetCore" Version="3.4.0" />
@@ -16,10 +15,14 @@
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="5.0.1" />
+    <PackageReference Include="BikeDataProject.DB" Version="1.1.1" />
+    <PackageReference Include="TCX" Version="0.0.2" />
+    <PackageReference Include="NetTopologySuite.IO.PostGis" Version="2.0.0" />
   </ItemGroup>
 
   <ItemGroup>
     <ProjectReference Include="..\BikeDataProject.Integrations.Fitbit.Db\BikeDataProject.Integrations.Fitbit.Db.csproj" />
+    <ProjectReference Include="..\Fitbit\Fitbit.csproj" />
   </ItemGroup>
   
 </Project>
