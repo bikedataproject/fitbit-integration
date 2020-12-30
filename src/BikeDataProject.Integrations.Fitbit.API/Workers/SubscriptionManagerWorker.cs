@@ -58,7 +58,9 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
             try
             {
                 var usersWithoutSubscription = await _db.Users
-                    .Where(x => x.AllSynced && x.SubscriptionId == null).Take(100).ToListAsync(cancellationToken: stoppingToken);
+                    .Where(x => x.AllSynced && x.SubscriptionId == null)
+                    .OrderBy(x => x.Id)
+                    .Take(100).ToListAsync(cancellationToken: stoppingToken);
 
                 foreach (var user in usersWithoutSubscription)
                 {
