@@ -4,16 +4,13 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BikeDataProject.Integrations.Fitbit;
-using BikeDataProject.Integrations.Fitbit.API;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace BikeDataProject.Integrations.FitBit.API.Workers
+namespace BikeDataProject.Integrations.Fitbit.API.Workers
 {
     public class HistorySyncWorker : BackgroundService
     {
@@ -36,7 +33,7 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
         
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var refreshTime = _configuration.GetValueOrDefault("refresh-time", 1000);
+            var refreshTime = _configuration.GetValueOrDefault<int>("refresh-time", 1000);
             
             // read/parse fitbit configurations.
             var fitbitCredentials = new FitbitAppCredentials()
@@ -49,25 +46,23 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
             {
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
-                
-                // await this.SyncDays(fitbitCredentials, stoppingToken);
-                // if (stoppingToken.IsCancellationRequested) continue;
+
+                await this.RunAsync(fitbitCredentials, stoppingToken);
                 
                 await Task.Delay(refreshTime, stoppingToken);
             }
         }
 
-        private async Task SyncDays(FitbitAppCredentials fitbitAppCredentials, CancellationToken stoppingToken)
+        private async Task RunAsync(FitbitAppCredentials fitbitAppCredentials, CancellationToken stoppingToken)
         {
             try
             {
-                var dayToSync = _db.DaysToSync
-                    .Where(x => !x.Synced)
-                    .Include(x => x.User).FirstOrDefault();
-
-                // no un synced updated resources.
-                if (dayToSync == null) return;
-                var user = dayToSync.User;
+                var user = (from users in _db.Users
+                    where users.AllSynced == false
+                    select users).FirstOrDefault();
+                
+                // no user found without history un synced.
+                if (user == null) return;
                 
                 // create fitbit client configured for the given user.
                 var (fitbitClient, userModified) = await fitbitAppCredentials.CreateFitbitClientForUser(user);
@@ -83,7 +78,8 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
                 if (!await this.SyncActivityTypes(fitbitClient)) return;
 
                 // get cycling activities.
-                var activities = await fitbitClient.GetActivityLogsListAsync(dayToSync.Day);
+                var after = user.LatestSyncedStamp ?? (new DateTime(1970, 1, 1)).ToUniversalTime();
+                var activities = await fitbitClient.GetActivityLogsListAsync(null, after);
                 if (activities?.Activities == null) return;
 
                 // sync all activities.
@@ -106,19 +102,13 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
                     contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(_db, user);
                     
                     // convert to contributions.
-                    var parsedContributions = tcxParsed.ToContributions();
-                    if (parsedContributions == null) continue;
-                    foreach (var contribution in parsedContributions)
+                    var parseContributions = tcxParsed.ToContributions();
+                    if (parseContributions == null) continue;
+                    foreach (var contribution in parseContributions)
                     {
                         await _contributionsDb.SaveContribution(_db, contribution, user, activity.LogId);
                     }
                 }
-                
-                // set as synced.
-                dayToSync.Synced = true;
-                _db.DaysToSync.Update(dayToSync);
-                // ReSharper disable once MethodSupportsCancellation
-                await _db.SaveChangesAsync();
             }
             catch (Exception e)
             {

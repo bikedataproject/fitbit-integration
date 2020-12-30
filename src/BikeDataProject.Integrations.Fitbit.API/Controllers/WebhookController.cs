@@ -33,6 +33,8 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
 
 	        var scopes = new[] {"activity","profile","location"};
 	        string authUrl = authenticator.GenerateAuthUrl(scopes, null);
+	        
+	        _logger.LogDebug($"Authorization requested.");
 
 	        return Redirect(authUrl);
         }
@@ -43,7 +45,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Controllers
         {
 	        try
 	        {
-		        _logger.LogInformation($"Request to register: {code}");
+		        _logger.LogDebug($"Request to register: {code}");
 
 		        var callback = $"{Request.Scheme}://{Request.Host}{Request.PathBase}/register";
 		        var authenticator = new OAuth2Helper(_configuration.FitbitAppCredentials, callback);
