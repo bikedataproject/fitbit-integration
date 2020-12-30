@@ -18,6 +18,7 @@
         {
             public const string TrailingSlash = "{0}/";
             public const string LeadingDash = "-{0}";
+            public const string Plain = "{0}";
         }
     }
 }

@@ -1141,7 +1141,21 @@ namespace Fitbit.Api.Portable
         /// <returns></returns>
         public async Task<List<ApiSubscription>> GetSubscriptionsAsync()
         {
-            string apiCall = FitbitClientHelperExtensions.ToFullUrl("/1/user/-/apiSubscriptions.json");
+            return await this.GetSubscriptionsAsync(null);
+        }
+
+        /// <summary>
+        /// Gets a list of the current subscriptions for the current logged in user
+        /// </summary>
+        /// <returns></returns>
+        public async Task<List<ApiSubscription>> GetSubscriptionsAsync(APICollectionType? apiCollectionType)
+        {
+            var apiCall = FitbitClientHelperExtensions.ToFullUrl("/1/user/-/apiSubscriptions.json");
+            if (apiCollectionType != null)
+            {
+                var apiCollectionTypeKey = FormatKey(apiCollectionType.Value, Constants.Formatting.Plain);
+                apiCall = FitbitClientHelperExtensions.ToFullUrl($"/1/user/-/{apiCollectionTypeKey}/apiSubscriptions.json");
+            }
             using (HttpRequestMessage request = GetRequest(HttpMethod.Get, apiCall))
             {
                 using (HttpResponseMessage response = await HttpClient.SendAsync(request, CancellationToken))

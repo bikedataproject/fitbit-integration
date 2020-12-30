@@ -50,8 +50,8 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
-                // await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
-                // if (stoppingToken.IsCancellationRequested) continue;
+                await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
+                if (stoppingToken.IsCancellationRequested) continue;
                 
                 // await this.SyncDays(fitbitCredentials, stoppingToken);
                 // if (stoppingToken.IsCancellationRequested) continue;
@@ -64,8 +64,8 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
         {
             try
             {
-                var usersWithoutSubscription = _db.Users
-                    .Where(x => x.AllSynced && x.SubscriptionId == null);
+                var usersWithoutSubscription = await _db.Users
+                    .Where(x => x.AllSynced && x.SubscriptionId == null).Take(100).ToListAsync(cancellationToken: stoppingToken);
 
                 foreach (var user in usersWithoutSubscription)
                 {
@@ -81,10 +81,21 @@ namespace BikeDataProject.Integrations.FitBit.Subscriber
                             // ReSharper disable once MethodSupportsCancellation
                             await _db.SaveChangesAsync();
                         }
-
-                        // register subscription.
-                        var subscriptionId = Guid.NewGuid().ToString();
-                        var apiSubscription = await fitbitClient.AddSubscriptionAsync(APICollectionType.activities, subscriptionId);
+                        
+                        // check if there is already a subscription.
+                        var existingSubscriptions = await fitbitClient.GetSubscriptionsAsync(APICollectionType.activities);
+                        var subscriptionId = string.Empty;
+                        if (existingSubscriptions == null || existingSubscriptions.Count == 0)
+                        {
+                            // register subscription.
+                            var apiSubscription = await fitbitClient.AddSubscriptionAsync(APICollectionType.activities, Guid.NewGuid().ToString());
+                            subscriptionId = apiSubscription.SubscriptionId;
+                        }
+                        else
+                        {
+                            // get existing subscription id.
+                            subscriptionId = existingSubscriptions.First().SubscriptionId;
+                        }
 
                         // store the subscription.
                         user.SubscriptionId = subscriptionId;
