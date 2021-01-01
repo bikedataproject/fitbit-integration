@@ -23,7 +23,8 @@ namespace BikeDataProject.Integrations.Fitbit.API
                 user = new DB.User()
                 {
                     Provider = Constants.FitbitProviderName,
-                    ProviderUser = fitbitUser.UserId
+                    ProviderUser = fitbitUser.UserId,
+                    UserIdentifier = Guid.NewGuid()
                 };
                 await dbContext.Users.AddAsync(user);
                 await dbContext.SaveChangesAsync();
@@ -33,7 +34,7 @@ namespace BikeDataProject.Integrations.Fitbit.API
             {
                 // update the local user with the user id in the contributions db.
                 fitbitUser.BikeDataProjectId = user.Id;
-                db.Update(user);
+                db.Users.Update(fitbitUser);
                 await db.SaveChangesAsync();
             }
 

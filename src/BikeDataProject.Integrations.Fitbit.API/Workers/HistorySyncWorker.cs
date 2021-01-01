@@ -33,38 +33,36 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
         
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var refreshTime = _configuration.GetValueOrDefault<int>("refresh-time", 1000);
-            
-            // read/parse fitbit configurations.
-            var fitbitCredentials = new FitbitAppCredentials()
-            {
-                ClientId = _configuration["FITBIT_CLIENT_ID"],
-                ClientSecret = await File.ReadAllTextAsync(_configuration["FITBIT_CLIENT_SECRET"], stoppingToken)
-            };
-
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
-                    DateTimeOffset.Now, refreshTime);
+                _logger.LogDebug("{worker} running at: {time}, triggered every {refreshTime}", 
+                    nameof(HistorySyncWorker), DateTimeOffset.Now, _configuration.GetValueOrDefault<int>("refresh-time", 1000));
 
                 var doSync = FitbitApiState.IsReady() && 
                              _configuration.GetValueOrDefault("SYNC_HISTORY", true);
                 if (!doSync)
                 {
-                    await Task.Delay(refreshTime, stoppingToken);
+                    await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);
                     continue;
                 }
 
-                await this.RunAsync(fitbitCredentials, stoppingToken);
+                await this.RunAsync(stoppingToken);
                 
-                await Task.Delay(refreshTime, stoppingToken);
+                await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);
             }
         }
 
-        private async Task RunAsync(FitbitAppCredentials fitbitAppCredentials, CancellationToken stoppingToken)
+        private async Task RunAsync(CancellationToken stoppingToken)
         {
             try
             {
+                // read/parse fitbit configurations.
+                var fitbitAppCredentials = new FitbitAppCredentials()
+                {
+                    ClientId = _configuration["FITBIT_CLIENT_ID"],
+                    ClientSecret = await File.ReadAllTextAsync(_configuration["FITBIT_CLIENT_SECRET"], stoppingToken)
+                };
+                
                 var user = (from users in _db.Users
                     where users.AllSynced == false
                     select users).FirstOrDefault();
@@ -101,16 +99,18 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
 
                     // check if activity with log id was already included.
                     if (_db.UserHasContributionWithLogId(user, activity.LogId)) continue;
+                    
+                    // create user in contributions db if needed and keep the id.
+                    contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(_db, user);
+                    
+                    // make sure not to hit rate limit.
+                    await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);
 
                     // get tcx.
                     var tcxParsed = await fitbitClient.GetTcxForActivity(activity);
-                    if (tcxParsed == null) continue;
-
-                    // create user in contributions db if needed and keep the id.
-                    contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(_db, user);
 
                     // convert to contributions.
-                    var parseContributions = tcxParsed.ToContributions();
+                    var parseContributions = tcxParsed?.ToContributions();
                     if (parseContributions == null) continue;
                     foreach (var contribution in parseContributions)
                     {
@@ -120,6 +120,11 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                     _logger.LogInformation("Activity {logId} for {userId} synchronized.",
                         activity.LogId, user.UserId);
                 }
+
+                // set history as saved.
+                user.AllSynced = true;
+                _db.Users.Update(user);
+                await _db.SaveChangesAsync();
             }
             catch (FitbitRateLimitException e)
             {

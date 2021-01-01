@@ -20,7 +20,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
 
         public static void HandleRateLimitException(FitbitRateLimitException e)
         {
-            
+            RetryAfter = e.RetryAfter;
         }
     }
 }

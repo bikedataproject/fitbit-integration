@@ -43,8 +43,8 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
 
             while (!stoppingToken.IsCancellationRequested)
             {
-                _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
-                    DateTimeOffset.Now, refreshTime);
+                _logger.LogDebug("{worker} running at: {time}, triggered every {refreshTime}", 
+                    nameof(SubscriptionManagerWorker), DateTimeOffset.Now, refreshTime);
 
                 var doSync = FitbitApiState.IsReady() && 
                              _configuration.GetValueOrDefault("SETUP_SUBSCRIPTIONS", true);
@@ -68,7 +68,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 var usersWithoutSubscription = await _db.Users
                     .Where(x => x.AllSynced && x.SubscriptionId == null)
                     .OrderBy(x => x.Id)
-                    .Take(100).ToListAsync(cancellationToken: stoppingToken);
+                    .Take(1).ToListAsync(cancellationToken: stoppingToken);
 
                 foreach (var user in usersWithoutSubscription)
                 {
