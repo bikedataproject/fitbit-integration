@@ -46,6 +46,9 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
+                var doSync = _configuration.GetValueOrDefault("SETUP_SUBSCRIPTIONS", true);
+                if (!doSync) continue;
+
                 await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
                 if (stoppingToken.IsCancellationRequested) continue;
                 

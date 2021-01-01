@@ -47,6 +47,9 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
+                var doSync = _configuration.GetValueOrDefault("SYNC_HISTORY", true);
+                if (!doSync) continue;
+
                 await this.RunAsync(fitbitCredentials, stoppingToken);
                 
                 await Task.Delay(refreshTime, stoppingToken);
@@ -108,6 +111,9 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                     {
                         await _contributionsDb.SaveContribution(_db, contribution, user, activity.LogId);
                     }
+                   
+                    _logger.LogInformation("Activity {logId} for {userId} synchronized.", 
+                        activity.LogId, user.UserId);
                 }
             }
             catch (Exception e)

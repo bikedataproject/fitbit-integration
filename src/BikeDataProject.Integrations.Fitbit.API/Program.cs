@@ -9,6 +9,7 @@ using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Formatting.Json;
 
@@ -46,13 +47,13 @@ namespace BikeDataProject.Integrations.Fitbit.API
                         })
                         .ConfigureServices((hostingContext, services) =>
                         {
-                            services.AddDbContext<FitbitDbContext>(o => o.UseNpgsql(
-                                    File.ReadAllText(hostingContext.Configuration["FITBIT_DB"])),
-                                ServiceLifetime.Transient);
+                            var fitbitDbString = File.ReadAllText(hostingContext.Configuration["FITBIT_DB"]);
+                            services.AddDbContext<FitbitDbContext>(o => o.UseNpgsql(fitbitDbString),
+                                ServiceLifetime.Transient, ServiceLifetime.Singleton);
                             
-                            services.AddDbContext<DB.BikeDataDbContext>(o => o.UseNpgsql(
-                                    File.ReadAllText(hostingContext.Configuration["DB"])),
-                                ServiceLifetime.Transient);
+                            var dbString = File.ReadAllText(hostingContext.Configuration["DB"]);
+                            services.AddDbContext<DB.BikeDataDbContext>(o => o.UseNpgsql( dbString),
+                                ServiceLifetime.Transient, ServiceLifetime.Singleton);
                             
                             services.AddHostedService<SubscriptionManagerWorker>();
                             services.AddHostedService<SubscriptionSyncWorker>();

@@ -49,9 +49,12 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
             {
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
+
+                var doSync = _configuration.GetValueOrDefault("SYNC_SUBSCRIPTIONS", true);
+                if (!doSync) continue;
                 
-                // await this.SyncDays(fitbitCredentials, stoppingToken);
-                // if (stoppingToken.IsCancellationRequested) continue;
+                await this.SyncDays(fitbitCredentials, stoppingToken);
+                if (stoppingToken.IsCancellationRequested) continue;
                 
                 await Task.Delay(refreshTime, stoppingToken);
             }
@@ -61,9 +64,25 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
         {
             try
             {
-                var dayToSync = _db.DaysToSync
-                    .Where(x => !x.Synced)
-                    .Include(x => x.User).FirstOrDefault();
+                // optionally only sync after the day has passed, this means we sync each day for each users once at maximum.
+                var syncAfterDay = _configuration.GetValueOrDefault<bool>("SYNC_SUBSCRIPTIONS_AFTER_DAY", false);
+                DayToSync? dayToSync;
+                if (!syncAfterDay)
+                {
+                    dayToSync = _db.DaysToSync
+                        .Where(x => !x.Synced)
+                        .Include(x => x.User).FirstOrDefault();
+                }
+                else
+                {
+                    // go 26hrs back and that date is the last date to sync.
+                    var lastDate = DateTime.Now.ToUniversalTime().AddHours(-26);
+                    lastDate = new DateTime(lastDate.Year, lastDate.Month, lastDate.Day, 0, 0, 0,
+                        DateTimeKind.Unspecified);
+                    dayToSync = _db.DaysToSync
+                        .Where(x => !x.Synced && x.Day <= lastDate)
+                        .Include(x => x.User).FirstOrDefault();
+                }
 
                 // no un synced updated resources.
                 if (dayToSync == null) return;
@@ -112,6 +131,9 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
                     {
                         await _contributionsDb.SaveContribution(_db, contribution, user, activity.LogId);
                     }
+                   
+                    _logger.LogInformation("Activity {logId} for {userId} synchronized.", 
+                        activity.LogId, user.UserId);
                 }
                 
                 // set as synced.

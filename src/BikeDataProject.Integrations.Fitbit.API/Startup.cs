@@ -1,11 +1,9 @@
 using System.IO;
 using BikeDataProject.Integrations.Fitbit.API.Controllers;
 using BikeDataProject.Integrations.FitBit.API.Controllers;
-using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
@@ -27,6 +25,7 @@ namespace BikeDataProject.Integrations.Fitbit.API
             // setup logging.
             services.AddLogging(b => { b.AddSerilog(); });
             
+            
             // read/parse fitbit configurations.
             var fitbitCredentials = new FitbitAppCredentials()
             {
@@ -44,10 +43,6 @@ namespace BikeDataProject.Integrations.Fitbit.API
                 FitbitAppCredentials = fitbitCredentials,
                 SubscriptionVerificationCode = subVerCode
             });
-            
-            // configure fitbit db access.
-            services.AddDbContext<FitbitDbContext>(options => options.UseNpgsql(
-                File.ReadAllText(_configuration["FITBIT_DB"])));
             
             // add controllers.
             services.AddControllers();
