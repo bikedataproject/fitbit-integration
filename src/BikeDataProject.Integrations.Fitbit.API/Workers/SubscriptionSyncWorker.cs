@@ -4,8 +4,6 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using BikeDataProject.Integrations.Fitbit;
-using BikeDataProject.Integrations.Fitbit.API;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Fitbit.Api.Portable;
 using Microsoft.EntityFrameworkCore;
@@ -13,7 +11,7 @@ using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 
-namespace BikeDataProject.Integrations.FitBit.API.Workers
+namespace BikeDataProject.Integrations.Fitbit.API.Workers
 {
     public class SubscriptionSyncWorker : BackgroundService
     {
@@ -50,8 +48,13 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
-                var doSync = _configuration.GetValueOrDefault("SYNC_SUBSCRIPTIONS", true);
-                if (!doSync) continue;
+                var doSync = FitbitApiState.IsReady() && 
+                             _configuration.GetValueOrDefault("SYNC_SUBSCRIPTIONS", true);
+                if (!doSync)
+                {
+                    await Task.Delay(refreshTime, stoppingToken);
+                    continue;
+                }
                 
                 await this.SyncDays(fitbitCredentials, stoppingToken);
                 if (stoppingToken.IsCancellationRequested) continue;
@@ -141,6 +144,11 @@ namespace BikeDataProject.Integrations.FitBit.API.Workers
                 _db.DaysToSync.Update(dayToSync);
                 // ReSharper disable once MethodSupportsCancellation
                 await _db.SaveChangesAsync();
+            }
+            catch (FitbitRateLimitException e)
+            {
+                _logger.LogCritical(e, "Rate limit hit, retrying at {seconds}.", e.RetryAfter);
+                FitbitApiState.HandleRateLimitException(e);
             }
             catch (Exception e)
             {

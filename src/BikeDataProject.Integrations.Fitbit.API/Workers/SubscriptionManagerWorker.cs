@@ -46,8 +46,13 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
-                var doSync = _configuration.GetValueOrDefault("SETUP_SUBSCRIPTIONS", true);
-                if (!doSync) continue;
+                var doSync = FitbitApiState.IsReady() && 
+                             _configuration.GetValueOrDefault("SETUP_SUBSCRIPTIONS", true);
+                if (!doSync)
+                {
+                    await Task.Delay(refreshTime, stoppingToken);
+                    continue;
+                }
 
                 await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
                 if (stoppingToken.IsCancellationRequested) continue;
@@ -106,6 +111,11 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                         _logger.LogError(e, "Failed to create subscription.");
                     }
                 }
+            }
+            catch (FitbitRateLimitException e)
+            {
+                _logger.LogCritical(e, "Rate limit hit, retrying at {seconds}.", e.RetryAfter);
+                FitbitApiState.HandleRateLimitException(e);
             }
             catch (Exception e)
             {

@@ -47,8 +47,13 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 _logger.LogDebug("Worker running at: {time}, triggered every {refreshTime}", 
                     DateTimeOffset.Now, refreshTime);
 
-                var doSync = _configuration.GetValueOrDefault("SYNC_HISTORY", true);
-                if (!doSync) continue;
+                var doSync = FitbitApiState.IsReady() && 
+                             _configuration.GetValueOrDefault("SYNC_HISTORY", true);
+                if (!doSync)
+                {
+                    await Task.Delay(refreshTime, stoppingToken);
+                    continue;
+                }
 
                 await this.RunAsync(fitbitCredentials, stoppingToken);
                 
@@ -63,10 +68,10 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 var user = (from users in _db.Users
                     where users.AllSynced == false
                     select users).FirstOrDefault();
-                
+
                 // no user found without history un synced.
                 if (user == null) return;
-                
+
                 // create fitbit client configured for the given user.
                 var (fitbitClient, userModified) = await fitbitAppCredentials.CreateFitbitClientForUser(user);
                 if (userModified)
@@ -91,19 +96,19 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 {
                     // if not a cycling activity, ignore.
                     if (!_activityTypes.Contains(activity.ActivityTypeId)) continue;
-                    
+
                     if (stoppingToken.IsCancellationRequested) break;
-                    
+
                     // check if activity with log id was already included.
                     if (_db.UserHasContributionWithLogId(user, activity.LogId)) continue;
-                    
+
                     // get tcx.
                     var tcxParsed = await fitbitClient.GetTcxForActivity(activity);
                     if (tcxParsed == null) continue;
-                    
+
                     // create user in contributions db if needed and keep the id.
                     contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(_db, user);
-                    
+
                     // convert to contributions.
                     var parseContributions = tcxParsed.ToContributions();
                     if (parseContributions == null) continue;
@@ -111,10 +116,15 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                     {
                         await _contributionsDb.SaveContribution(_db, contribution, user, activity.LogId);
                     }
-                   
-                    _logger.LogInformation("Activity {logId} for {userId} synchronized.", 
+
+                    _logger.LogInformation("Activity {logId} for {userId} synchronized.",
                         activity.LogId, user.UserId);
                 }
+            }
+            catch (FitbitRateLimitException e)
+            {
+                _logger.LogCritical(e, "Rate limit hit, retrying at {seconds}.", e.RetryAfter);
+                FitbitApiState.HandleRateLimitException(e);
             }
             catch (Exception e)
             {

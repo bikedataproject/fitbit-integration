@@ -2,14 +2,12 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using BikeDataProject.Integrations.Fitbit.API.Workers;
-using BikeDataProject.Integrations.FitBit.API.Workers;
 using BikeDataProject.Integrations.Fitbit.Db;
 using Microsoft.AspNetCore;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
-using Microsoft.Extensions.Hosting;
 using Serilog;
 using Serilog.Formatting.Json;
 
