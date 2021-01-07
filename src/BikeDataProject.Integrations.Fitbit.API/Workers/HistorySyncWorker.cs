@@ -118,7 +118,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                     var tcxParsed = await fitbitClient.GetTcxForActivity(activity);
 
                     // convert to contributions.
-                    var parseContributions = tcxParsed?.ToContributions();
+                    var parseContributions = tcxParsed?.ToContributions(_logger);
                     if (parseContributions == null) continue;
                     foreach (var contribution in parseContributions)
                     {

@@ -134,7 +134,7 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                     contributionsDbUser ??= await _contributionsDb.CreateOrGetUser(_db, user);
                     
                     // convert to contributions.
-                    var parsedContributions = tcxParsed.ToContributions();
+                    var parsedContributions = tcxParsed.ToContributions(_logger);
                     if (parsedContributions == null) continue;
                     foreach (var contribution in parsedContributions)
                     {

@@ -6,6 +6,7 @@ using BikeDataProject.Integrations.Fitbit.Db;
 using NetTopologySuite.Geometries;
 using NetTopologySuite.IO;
 using TCX.Domain;
+using Microsoft.Extensions.Logging;
 
 namespace BikeDataProject.Integrations.Fitbit.API
 {
@@ -41,7 +42,7 @@ namespace BikeDataProject.Integrations.Fitbit.API
             return user;
         }
 
-        public static IEnumerable<DB.Contribution>? ToContributions(this TrainingCenterDatabase tcx)
+        public static IEnumerable<DB.Contribution>? ToContributions(this TrainingCenterDatabase tcx, ILogger logger)
         {
             if (tcx.Activities?.Activity == null) yield break;
             foreach (var a in tcx.Activities.Activity)
@@ -62,10 +63,16 @@ namespace BikeDataProject.Integrations.Fitbit.API
 
                         if (coordinates.Count > 1)
                         {
-                            distance += Helpers.CalculateDistance(coordinates[^2], coordinates[^1]);
+                            var step = Helpers.CalculateDistance(coordinates[^2], coordinates[^1]);
+                            if (!(step >= 0 && step <= double.MaxValue))
+                            {
+                                continue;
+                            }
+
+                            distance += step;
                         }
                     }
-
+                    
                     var first = timestamps.First();
                     var last = timestamps.Last();
                     var geometry = new LineString(coordinates.ToArray());
