@@ -38,8 +38,16 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
                 _logger.LogDebug("{worker} running at: {time}, triggered every {refreshTime}", 
                     nameof(HistorySyncWorker), DateTimeOffset.Now, _configuration.GetValueOrDefault<int>("refresh-time", 1000));
 
-                var doSync = FitbitApiState.IsReady() && 
-                             _configuration.GetValueOrDefault("SYNC_HISTORY", true);
+                var enabled = _configuration.GetValueOrDefault("SYNC_HISTORY", true);
+                if (!enabled)
+                {
+                    _logger.LogWarning($"{nameof(HistorySyncWorker)} is not enabled.");
+                    
+                    await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);
+                    continue;
+                }
+
+                var doSync = FitbitApiState.IsReady();
                 if (!doSync)
                 {
                     await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);

@@ -32,8 +32,6 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
         
         protected override async Task ExecuteAsync(CancellationToken stoppingToken)
         {
-            var refreshTime = _configuration.GetValueOrDefault("refresh-time", 1000);
-            
             // read/parse fitbit configurations.
             var fitbitCredentials = new FitbitAppCredentials()
             {
@@ -44,20 +42,28 @@ namespace BikeDataProject.Integrations.Fitbit.API.Workers
             while (!stoppingToken.IsCancellationRequested)
             {
                 _logger.LogDebug("{worker} running at: {time}, triggered every {refreshTime}", 
-                    nameof(SubscriptionManagerWorker), DateTimeOffset.Now, refreshTime);
+                    nameof(SubscriptionManagerWorker), DateTimeOffset.Now, _configuration.GetValueOrDefault<int>("refresh-time", 1000));
 
-                var doSync = FitbitApiState.IsReady() && 
-                             _configuration.GetValueOrDefault("SETUP_SUBSCRIPTIONS", true);
+                var enabled = _configuration.GetValueOrDefault("SETUP_SUBSCRIPTIONS", true);
+                if (!enabled)
+                {
+                    _logger.LogWarning($"{nameof(SubscriptionManagerWorker)} is not enabled.");
+                    
+                    await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);
+                    continue;
+                }
+
+                var doSync = FitbitApiState.IsReady();
                 if (!doSync)
                 {
-                    await Task.Delay(refreshTime, stoppingToken);
+                    await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);
                     continue;
                 }
 
                 await this.SetupSubscriptions(fitbitCredentials, stoppingToken);
                 if (stoppingToken.IsCancellationRequested) continue;
                 
-                await Task.Delay(refreshTime, stoppingToken);
+                await Task.Delay(_configuration.GetValueOrDefault<int>("refresh-time", 1000), stoppingToken);
             }
         }
 
